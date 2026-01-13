@@ -1,4 +1,4 @@
-package auto2i.ui;
+package auto2i.ui.home;
 
 import auto2i.ui.components.CardPanel;
 

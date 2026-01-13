@@ -1,8 +1,9 @@
-package auto2i.ui;
+package auto2i.ui.panels;
 
+import auto2i.ui.MainFrame;
 import auto2i.ui.components.RoundedButton;
-import static auto2i.ui.UIConstants.*;
-import static auto2i.ui.UIIcons.*;
+import static auto2i.ui.constants.UIConstants.*;
+import static auto2i.ui.constants.UIIcons.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -41,43 +42,37 @@ public class SidebarPanel extends JPanel {
         add(brand);
         add(Box.createVerticalStrut(20));
 
-        // Création des boutons
-        //RoundedButton btnAccueil = createMainButton("  Accueil", null, true);
+        // ✅ IMPORTANT : on remplit les ATTRIBUTS, pas des variables locales
+        btnVehicules = createMainButton("  Véhicules", "car.png", false);
+        btnVehListe  = createSubButton("Liste");
+        btnVehNew    = createSubButton("Nouveau");
 
-        RoundedButton btnVehicules = createMainButton("  Véhicules", "car.png", false);
-        RoundedButton btnVehListe  = createSubButton("Liste");
-        RoundedButton btnVehNew    = createSubButton("Nouveau");
+        btnInter = createMainButton("  Interventions", "intervention.png", false);
+        btnRep   = createSubButton("Réparation");
+        btnEnt   = createSubButton("Entretien");
 
-        RoundedButton btnInter = createMainButton("  Interventions", "intervention.png", false);
-        RoundedButton btnRep   = createSubButton("Réparation");
-        RoundedButton btnEnt   = createSubButton("Entretien");
+        btnClients = createMainButton("  Clients", "service-client.png", false);
+        btnCliList = createSubButton("Liste");
+        btnCliNew  = createSubButton("Nouveau");
 
-        RoundedButton btnClients = createMainButton("  Clients", "service-client.png", false);
-        RoundedButton btnCliList = createSubButton("Liste");
-        RoundedButton btnCliNew  = createSubButton("Nouveau");
-
-        // Ajout des sections
-        //add(createSection(btnAccueil));
         add(createSection(btnVehicules, btnVehListe, btnVehNew));
         add(createSection(btnInter, btnRep, btnEnt));
         add(createSection(btnClients, btnCliList, btnCliNew));
 
-        // === LISTENERS (navigation) ===
-        //btnAccueil.addActionListener(e -> nav.goHome());
+        // LISTENERS
         btnVehicules.addActionListener(e -> nav.goVehiculesList());
-        btnClients.addActionListener(e -> nav.goClientsList());
-        btnInter.addActionListener(e -> nav.goReparations()); // ou une page interventions
-
         btnVehListe.addActionListener(e -> nav.goVehiculesList());
         btnVehNew.addActionListener(e -> nav.goVehiculesNew());
 
+        btnInter.addActionListener(e -> nav.goReparations());
         btnRep.addActionListener(e -> nav.goReparations());
         btnEnt.addActionListener(e -> nav.goEntretiens());
 
+        btnClients.addActionListener(e -> nav.goClientsList());
         btnCliList.addActionListener(e -> nav.goClientsList());
         btnCliNew.addActionListener(e -> nav.goClientsNew());
-
     }
+
 
     private JPanel section(String title, String sub1, Runnable a1, String sub2, Runnable a2) {
         JPanel p = new JPanel();
@@ -172,38 +167,75 @@ public class SidebarPanel extends JPanel {
         return b;
     }
 
-    public void setActive(String key) {
-        // reset
-        btnVehicules.setColors(new Color(215,215,215), BLUE_MAIN);
-        btnVehListe.setColors(new Color(230,230,230), BLUE_MAIN);
-        btnVehNew.setColors(new Color(230,230,230), BLUE_MAIN);
 
-        btnClients.setColors(new Color(215,215,215), BLUE_MAIN);
-        btnCliList.setColors(new Color(230,230,230), BLUE_MAIN);
-        btnCliNew.setColors(new Color(230,230,230), BLUE_MAIN);
-
-        btnInter.setColors(new Color(215,215,215), BLUE_MAIN);
-        btnRep.setColors(new Color(230,230,230), BLUE_MAIN);
-        btnEnt.setColors(new Color(230,230,230), BLUE_MAIN);
-
-        // active main + active sub
-        if ("VEH_LIST".equals(key)) {
-            btnVehicules.setColors(ORANGE_MAIN, Color.WHITE);
-            btnVehListe.setColors(new Color(255, 219, 102), new Color(200, 120, 0)); // jaune
-        }
-        if ("VEH_NEW".equals(key)) {
-            btnVehicules.setColors(ORANGE_MAIN, Color.WHITE);
-            btnVehNew.setColors(new Color(255, 219, 102), new Color(200, 120, 0));
-        }
-        if ("CLI_LIST".equals(key)) {
-            btnClients.setColors(ORANGE_MAIN, Color.WHITE);
-            btnCliList.setColors(new Color(255, 219, 102), new Color(200, 120, 0));
-        }
-        if ("CLI_NEW".equals(key)) {
-            btnClients.setColors(ORANGE_MAIN, Color.WHITE);
-            btnCliNew.setColors(new Color(255, 219, 102), new Color(200, 120, 0));
-        }
+    private void setMainActive(RoundedButton b) {
+        b.setColors(ORANGE_MAIN, Color.WHITE);
     }
+
+    private void setMainInactive(RoundedButton b) {
+        b.setColors(BTN_MAIN_INACTIVE, BLUE_MAIN);
+    }
+
+    private void setSubActive(RoundedButton b) {
+        b.setColors(YELLOW_ACTIVE, BLUE_MAIN);
+    }
+
+    private void setSubInactive(RoundedButton b) {
+        b.setColors(BTN_SUB_INACTIVE, BLUE_MAIN);
+    }
+
+
+
+    public void setActive(String pageKey) {
+        // reset tous les styles en "inactif"
+        setMainInactive(btnVehicules);
+        setSubInactive(btnVehListe);
+        setSubInactive(btnVehNew);
+
+        setMainInactive(btnClients);
+        setSubInactive(btnCliList);
+        setSubInactive(btnCliNew);
+
+        setMainInactive(btnInter);
+        setSubInactive(btnRep);
+        setSubInactive(btnEnt);
+
+        // activer selon la page
+        switch (pageKey) {
+            case MainFrame.PAGE_VEHICULE_LIST:
+                setMainActive(btnVehicules);
+                setSubActive(btnVehListe);
+                break;
+            case MainFrame.PAGE_VEHICULE_NEW:
+                setMainActive(btnVehicules);
+                setSubActive(btnVehNew);
+                break;
+            case MainFrame.PAGE_CLIENT_LIST:
+                setMainActive(btnClients);
+                setSubActive(btnCliList);
+                break;
+            case MainFrame.PAGE_CLIENT_NEW:
+                setMainActive(btnClients);
+                setSubActive(btnCliNew);
+                break;
+            case MainFrame.PAGE_REPARATION:
+                setMainActive(btnInter);
+                setSubActive(btnRep);
+                break;
+            case MainFrame.PAGE_ENTRETIEN:
+                setMainActive(btnInter);
+                setSubActive(btnEnt);
+                break;
+            case MainFrame.PAGE_HOME:
+            default:
+                // option : rien d’actif ou un bouton "Accueil" si tu l’ajoutes
+                break;
+        }
+
+        repaint();
+        revalidate();
+    }
+
 
 
 

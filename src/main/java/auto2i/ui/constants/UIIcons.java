@@ -1,4 +1,4 @@
-package auto2i.ui;
+package auto2i.ui.constants;
 
 import javax.swing.*;
 import java.awt.*;

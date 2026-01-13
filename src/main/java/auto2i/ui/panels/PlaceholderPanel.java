@@ -1,8 +1,8 @@
-package auto2i.ui;
+package auto2i.ui.panels;
 
 import javax.swing.*;
 import java.awt.*;
-import static auto2i.ui.UIConstants.*;
+import static auto2i.ui.constants.UIConstants.*;
 
 public class PlaceholderPanel extends JPanel {
 
