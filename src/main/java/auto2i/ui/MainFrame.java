@@ -36,6 +36,11 @@ public class MainFrame extends JFrame {
     private VehiculeShowPanel vehiculeShowPanel;
     private ClientShowPanel clientShowPanel;
 
+    private ClientListPanel clientListPanel;
+    private ClientNewPanel clientNewPanel;
+    private VehiculeListPanel vehiculeListPanel;
+    private VehiculeNewPanel vehiculeNewPanel;
+
     public MainFrame() {
         super("Auto2i - Gestion des automobiles");
 
@@ -53,7 +58,7 @@ public class MainFrame extends JFrame {
             @Override public void goVehiculesList() { showPage(PAGE_VEHICULE_LIST); }
             @Override public void goVehiculesNew() { showPage(PAGE_VEHICULE_NEW); }
             @Override public void goClientsList() { showPage(PAGE_CLIENT_LIST); }
-            @Override public void goClientsNew() { showPage(PAGE_CLIENT_NEW); }
+            @Override public void goClientsNew() { goClientNew(); }
             @Override public void goReparations() { showPage(PAGE_REPARATION); }
             @Override public void goEntretiens() { showPage(PAGE_ENTRETIEN); }
         });
@@ -81,23 +86,39 @@ public class MainFrame extends JFrame {
 
         contentCards.add(new VehiculeNewPanel(() -> showPage(PAGE_VEHICULE_LIST)), PAGE_VEHICULE_NEW);
 
-        // ===== CLIENTS
-        clientShowPanel = new ClientShowPanel(() -> showPage(PAGE_CLIENT_LIST));
+// ===== CLIENTS
+        clientShowPanel = new ClientShowPanel(
+                () -> {
+                    showPage(PAGE_CLIENT_LIST);
+                    clientListPanel.reloadAll();
+                },
+                clientToEdit -> {
+                    clientNewPanel.editClient(clientToEdit); // pré-remplir sans reset
+                    showPage(PAGE_CLIENT_NEW);
+                }
+        );
+
+
         contentCards.add(clientShowPanel, PAGE_CLIENT_SHOW);
 
-        contentCards.add(
+        clientListPanel =
                 new ClientListPanel(
                         () -> showPage(PAGE_HOME),
-                        () -> showPage(PAGE_CLIENT_NEW),
+                        () -> goClientNew(),
                         client -> {
                             clientShowPanel.setClient(client);
                             showPage(PAGE_CLIENT_SHOW);
                         }
-                ),
-                PAGE_CLIENT_LIST
-        );
+                );
+        contentCards.add(clientListPanel, PAGE_CLIENT_LIST);
 
-        contentCards.add(new ClientNewPanel(() -> showPage(PAGE_CLIENT_LIST)), PAGE_CLIENT_NEW);
+        clientNewPanel = new ClientNewPanel(() -> {
+            // retour liste + refresh
+            showPage(PAGE_CLIENT_LIST);
+            clientListPanel.reloadAll();
+
+        });
+        contentCards.add(clientNewPanel, PAGE_CLIENT_NEW);
 
         // ===== OTHERS
         contentCards.add(new PlaceholderPanel("Réparations"), PAGE_REPARATION);
@@ -109,10 +130,20 @@ public class MainFrame extends JFrame {
         showPage(PAGE_HOME);
     }
 
+    private void goClientNew() {
+        if (clientNewPanel != null) clientNewPanel.resetForm(); // uniquement création
+        showPage(PAGE_CLIENT_NEW);
+    }
+
     public void showPage(String pageKey) {
+
+        // Quand on ouvre la liste, on recharge la BDD
+        if (PAGE_CLIENT_LIST.equals(pageKey) && clientListPanel != null) {
+            clientListPanel.reloadAll();
+        }
+
         cardLayout.show(contentCards, pageKey);
 
-        // Pour garder la sidebar “Clients” active même quand on est en show
         if (PAGE_CLIENT_SHOW.equals(pageKey)) {
             sidebar.setActive(PAGE_CLIENT_LIST);
         } else if (PAGE_VEHICULE_SHOW.equals(pageKey)) {
@@ -121,6 +152,9 @@ public class MainFrame extends JFrame {
             sidebar.setActive(pageKey);
         }
     }
+
+
+
 
     public static void main(String[] args) {
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }

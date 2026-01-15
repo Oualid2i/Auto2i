@@ -5,26 +5,22 @@
              version="3.2">
 
     <persistence-unit name="Auto2iPU" transaction-type="RESOURCE_LOCAL">
-
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <class>auto2i.model.Vehicule</class>
+        <class>auto2i.model.Client</class>
 
         <!-- Les entités seront détectées automatiquement -->
         <properties>
-            <!-- Connexion MySQL -->
-            <property name="jakarta.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/auto2i_db?useSSL=false&amp;serverTimezone=UTC"/>
+            <!-- Connexion MySQL (évite les pièges localhost/SSL/timezone) -->
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:mysql://127.0.0.1:3306/auto2i_db?useSSL=false&amp;serverTimezone=UTC&amp;allowPublicKeyRetrieval=true"/>
             <property name="jakarta.persistence.jdbc.user" value="root"/>
             <property name="jakarta.persistence.jdbc.password" value=""/>
             <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
 
-            <!-- Hibernate -->
-            <property name="hibernate.hbm2ddl.auto" value="update"/>
-            <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
-
-
-            <!-- Charset UTF-8 -->
-            <property name="hibernate.connection.charSet" value="UTF-8"/>
         </properties>
+
     </persistence-unit>
 
 </persistence>

@@ -1,19 +1,44 @@
 package auto2i.model;
 
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+@Table(name = "client")
 public class Client {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_client")
+    private Long id;
+
+    @Column(nullable = false)
     private String prenom;
+
+    @Column(nullable = false)
     private String nom;
+
+    @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(name = "telephone")
     private String telephone;
 
-    public Client() {}
+    @OneToMany(mappedBy = "client")
+    private List<Vehicule> vehicules;
+
+    // ✅ constructeur requis par JPA
+    protected Client() {}
 
     public Client(String prenom, String nom, String email, String telephone) {
         this.prenom = prenom;
         this.nom = nom;
         this.email = email;
         this.telephone = telephone;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getPrenom() {
@@ -46,5 +71,9 @@ public class Client {
 
     public void setTelephone(String telephone) {
         this.telephone = telephone;
+    }
+
+    public List<Vehicule> getVehicules() {
+        return vehicules;
     }
 }

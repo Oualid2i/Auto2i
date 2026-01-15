@@ -1,5 +1,7 @@
 package auto2i.ui.client;
 
+import auto2i.dao.ClientDao;
+import auto2i.model.Client;
 import auto2i.ui.components.CardPanel;
 import auto2i.ui.components.RoundedButton;
 
@@ -13,6 +15,9 @@ import static auto2i.ui.constants.UIIcons.*;
 public class ClientNewPanel extends JPanel {
 
     private final Runnable onBack;
+    private final ClientDao clientDao = new ClientDao();
+    private Client editingClient = null; // null = création, sinon édition
+
 
     private JTextField tfPrenom, tfNom, tfEmail, tfTel;
 
@@ -36,7 +41,10 @@ public class ClientNewPanel extends JPanel {
         RoundedButton back = new RoundedButton("←", ORANGE_MAIN, Color.WHITE, 16);
         back.setPreferredSize(new Dimension(50, 40));
         back.setHorizontalAlignment(SwingConstants.CENTER);
-        back.addActionListener(e -> { if (onBack != null) onBack.run(); });
+        back.addActionListener(e -> {
+            resetForm();
+            if (onBack != null) onBack.run();
+        });
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         left.setOpaque(false);
@@ -149,7 +157,6 @@ public class ClientNewPanel extends JPanel {
         return col;
     }
 
-
     private JComponent mockVehiculeRow(String immat, String marque, String modele, String energie) {
         CardPanel row = new CardPanel(18, BORDER);
         row.setLayout(new BorderLayout());
@@ -182,9 +189,96 @@ public class ClientNewPanel extends JPanel {
         save.setPreferredSize(new Dimension(320, 55));
         save.setFont(save.getFont().deriveFont(Font.BOLD, 18f));
 
+        // ✅ Liaison BDD
+        save.addActionListener(e -> onSave());
+
         footer.add(save);
         return footer;
     }
+
+    private void onSave() {
+        String prenom = tfPrenom.getText().trim();
+        String nom = tfNom.getText().trim();
+        String email = tfEmail.getText().trim();
+        String tel = tfTel.getText().trim();
+
+        if (prenom.isBlank() || nom.isBlank() || email.isBlank()) {
+            JOptionPane.showMessageDialog(this,
+                    "Prénom, nom et email sont obligatoires.",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!isNomPrenomValide(prenom)) {
+            JOptionPane.showMessageDialog(this,
+                    "Prénom invalide : pas de chiffres / caractères spéciaux.",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!isNomPrenomValide(nom)) {
+            JOptionPane.showMessageDialog(this,
+                    "Nom invalide : pas de chiffres / caractères spéciaux.",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!isEmailValide(email)) {
+            JOptionPane.showMessageDialog(this,
+                    "Email invalide.",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!isTelephoneValide(tel)) {
+            JOptionPane.showMessageDialog(this,
+                    "Téléphone invalide.\nExemples : 06 12 34 56 78 ou +33 6 12 34 56 78",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            if (editingClient == null) {
+                // ✅ création
+                Client c = new Client(prenom, nom, email, tel.isBlank() ? null : tel);
+                clientDao.save(c);
+
+                JOptionPane.showMessageDialog(this,
+                        "Client enregistré ✅",
+                        "OK",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                resetForm(); // vide après création
+            } else {
+                // ✅ modification
+                editingClient.setPrenom(prenom);
+                editingClient.setNom(nom);
+                editingClient.setEmail(email);
+                editingClient.setTelephone(tel.isBlank() ? null : tel);
+
+                clientDao.update(editingClient); // ou save() si ton DAO fait merge
+                JOptionPane.showMessageDialog(this,
+                        "Client modifié ✅",
+                        "OK",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+
+            if (onBack != null) onBack.run();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Erreur BDD : " + ex.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+
+    }
+
 
     // ===== helpers (labels à gauche)
     private JPanel columnPanel() {
@@ -238,4 +332,56 @@ public class ClientNewPanel extends JPanel {
         comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
         comp.setAlignmentX(Component.LEFT_ALIGNMENT); // ✅ important
     }
+
+    public void resetForm() {
+        editingClient = null; // repasse en mode création
+        tfPrenom.setText("");
+        tfNom.setText("");
+        tfEmail.setText("");
+        tfTel.setText("");
+    }
+
+    public void editClient(Client c) {
+        if (c == null) return;
+
+        editingClient = c;
+
+        tfPrenom.setText(c.getPrenom());
+        tfNom.setText(c.getNom());
+        tfEmail.setText(c.getEmail());
+        tfTel.setText(c.getTelephone() == null ? "" : c.getTelephone());
+    }
+
+    private boolean isNomPrenomValide(String s) {
+        // lettres, espaces, tiret, apostrophe, accents OK
+        return s != null && s.matches("^[A-Za-zÀ-ÖØ-öø-ÿ'\\-\\s]+$");
+    }
+
+    private boolean isEmailValide(String email) {
+        if (email == null) return false;
+        // email simple
+        boolean ok = email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+        if (!ok) return false;
+
+        // ✅ si tu veux forcer gmail uniquement :
+        // return email.toLowerCase().endsWith("@gmail.com");
+
+        return true;
+    }
+
+    private boolean isTelephoneValide(String tel) {
+        if (tel == null || tel.isBlank()) return true; // téléphone optionnel
+        String t = tel.trim();
+
+        // formats acceptés :
+        // +33 6 12 34 56 78
+        // +33 06 12 34 56 78 (on accepte)
+        // 06 12 34 56 78
+        // 0612345678
+        return t.matches("^\\+33\\s?[0-9]\\s?(\\d{2}\\s?){4}$")
+                || t.matches("^0\\d(\\s?\\d{2}){4}$");
+    }
+
+
+
 }

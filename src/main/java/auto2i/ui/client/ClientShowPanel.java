@@ -1,5 +1,6 @@
 package auto2i.ui.client;
 
+import auto2i.dao.ClientDao;
 import auto2i.model.Client;
 import auto2i.ui.components.CardPanel;
 import auto2i.ui.components.RoundedButton;
@@ -7,17 +8,23 @@ import auto2i.ui.components.RoundedButton;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.function.Consumer;
 
 import static auto2i.ui.constants.UIConstants.*;
 
 public class ClientShowPanel extends JPanel {
 
     private final Runnable onBack;
+    private final Consumer<Client> onEdit; // ✅ callback modifier
+
+    private final ClientDao clientDao = new ClientDao();
+    private Client client; // ✅ client affiché
 
     private JTextField tfPrenom, tfNom, tfEmail, tfTel;
 
-    public ClientShowPanel(Runnable onBack) {
+    public ClientShowPanel(Runnable onBack, Consumer<Client> onEdit) {
         this.onBack = onBack;
+        this.onEdit = onEdit;
 
         setLayout(new BorderLayout());
         setBackground(BG_APP);
@@ -114,6 +121,7 @@ public class ClientShowPanel extends JPanel {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBorder(new EmptyBorder(18, 18, 18, 18));
 
+        // Mock rows (plus tard: charger depuis client.getVehicules())
         card.add(mockVehiculeRow("AJ-433-BD", "Peugeot", "206", "Essence"));
         card.add(Box.createVerticalStrut(12));
         card.add(mockVehiculeRow("GN-432-CL", "Citroen", "C5", "Diesel"));
@@ -164,11 +172,48 @@ public class ClientShowPanel extends JPanel {
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
         }
 
+        // ✅ bouton Modifier -> callback
+        modif.addActionListener(e -> {
+            if (client != null && onEdit != null) {
+                onEdit.accept(client);
+            }
+        });
+
+        // ✅ Liaison suppression BDD
+        del.addActionListener(e -> onDelete());
+
         p.add(modif);
         p.add(Box.createVerticalStrut(18));
         p.add(del);
 
         return p;
+    }
+
+    private void onDelete() {
+        if (client == null || client.getId() == null) return;
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Supprimer le client \"" + client.getPrenom() + " " + client.getNom() + "\" ?",
+                "Confirmation",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            clientDao.delete(client.getId());
+
+            JOptionPane.showMessageDialog(this,
+                    "Client supprimé ✅",
+                    "OK",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            if (onBack != null) onBack.run();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Erreur lors de la suppression :\n" + ex.getMessage(),
+                    "Erreur BDD",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // ===== helpers gauche
@@ -225,6 +270,9 @@ public class ClientShowPanel extends JPanel {
     // ===== API
     public void setClient(Client c) {
         if (c == null) return;
+
+        this.client = c;
+
         tfPrenom.setText(c.getPrenom());
         tfNom.setText(c.getNom());
         tfEmail.setText(c.getEmail());

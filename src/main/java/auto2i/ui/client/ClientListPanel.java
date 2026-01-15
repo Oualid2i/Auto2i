@@ -1,5 +1,6 @@
 package auto2i.ui.client;
 
+import auto2i.dao.ClientDao;
 import auto2i.model.Client;
 import auto2i.ui.components.CardPanel;
 import auto2i.ui.components.RoundedButton;
@@ -7,7 +8,6 @@ import auto2i.ui.components.RoundedButton;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -18,6 +18,8 @@ public class ClientListPanel extends JPanel {
     private final Runnable onBack;
     private final Runnable onAdd;
     private final Consumer<Client> onShow;
+
+    private final ClientDao clientDao = new ClientDao();
 
     private JTextField tfSearch;
     private JPanel listBox;
@@ -34,8 +36,13 @@ public class ClientListPanel extends JPanel {
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildContent(), BorderLayout.CENTER);
 
-        // Démo (à remplacer par tes données réelles)
-        setClients(demoClients());
+        // ✅ Charge depuis la BDD
+        reloadAll();
+    }
+
+    // ✅ rendu public pour pouvoir rafraîchir depuis l'extérieur
+    public void reloadAll() {
+        setClients(clientDao.findAll());
     }
 
     private JPanel buildTopBar() {
@@ -92,6 +99,19 @@ public class ClientListPanel extends JPanel {
         bSearch.setPreferredSize(new Dimension(260, 55));
         bSearch.setFont(bSearch.getFont().deriveFont(Font.BOLD, 18f));
 
+        // ✅ action recherche BDD
+        bSearch.addActionListener(e -> {
+            String q = tfSearch.getText();
+            if (q == null || q.isBlank()) {
+                reloadAll();
+            } else {
+                setClients(clientDao.search(q));
+            }
+        });
+
+        // Entrée -> chercher
+        tfSearch.addActionListener(e -> bSearch.doClick());
+
         RoundedButton bAdd = new RoundedButton("+", ORANGE_MAIN, Color.WHITE, 20);
         bAdd.setPreferredSize(new Dimension(70, 55));
         bAdd.setFont(bAdd.getFont().deriveFont(Font.BOLD, 22f));
@@ -118,16 +138,30 @@ public class ClientListPanel extends JPanel {
         listBox.setOpaque(false);
         listBox.setLayout(new BoxLayout(listBox, BoxLayout.Y_AXIS));
 
-        card.add(listBox, BorderLayout.NORTH);
+        // ✅ scroll
+        JScrollPane sp = new JScrollPane(listBox);
+        sp.setBorder(null);
+        sp.getViewport().setOpaque(false);
+        sp.setOpaque(false);
+        sp.getVerticalScrollBar().setUnitIncrement(16);
+
+        card.add(sp, BorderLayout.CENTER);
         return card;
     }
 
     public void setClients(List<Client> clients) {
         listBox.removeAll();
 
-        for (Client cl : clients) {
-            listBox.add(buildRow(cl));
-            listBox.add(Box.createVerticalStrut(14));
+        if (clients == null || clients.isEmpty()) {
+            JLabel empty = new JLabel("Aucun client trouvé");
+            empty.setForeground(Color.GRAY);
+            empty.setAlignmentX(Component.LEFT_ALIGNMENT);
+            listBox.add(empty);
+        } else {
+            for (Client cl : clients) {
+                listBox.add(buildRow(cl));
+                listBox.add(Box.createVerticalStrut(14));
+            }
         }
 
         listBox.revalidate();
@@ -152,9 +186,7 @@ public class ClientListPanel extends JPanel {
         RoundedButton see = new RoundedButton("Voir", ORANGE_MAIN, Color.WHITE, 20);
         see.setPreferredSize(new Dimension(140, 46));
         see.setFont(see.getFont().deriveFont(Font.BOLD, 16f));
-        see.addActionListener(e -> {
-            if (onShow != null) onShow.accept(cl); // ✅ redirection
-        });
+        see.addActionListener(e -> { if (onShow != null) onShow.accept(cl); });
 
         row.add(grid, BorderLayout.CENTER);
         row.add(see, BorderLayout.EAST);
@@ -162,7 +194,6 @@ public class ClientListPanel extends JPanel {
         return row;
     }
 
-    // ===== style helpers (alignement gauche stable)
     private void styleField(JTextField f) {
         f.setFont(f.getFont().deriveFont(Font.PLAIN, 14f));
         f.setBackground(Color.WHITE);
@@ -177,14 +208,5 @@ public class ClientListPanel extends JPanel {
         comp.setMinimumSize(new Dimension(10, h));
         comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
         comp.setAlignmentX(Component.LEFT_ALIGNMENT);
-    }
-
-    private List<Client> demoClients() {
-        List<Client> l = new ArrayList<>();
-        l.add(new Client("Jean", "Dupont", "jdupont@gmail.com", "06 78 04 67 23"));
-        l.add(new Client("Jean", "Dupont", "jdupont@gmail.com", "06 78 04 67 23"));
-        l.add(new Client("Jean", "Dupont", "jdupont@gmail.com", "06 78 04 67 23"));
-        l.add(new Client("Jean", "Dupont", "jdupont@gmail.com", "06 78 04 67 23"));
-        return l;
     }
 }
