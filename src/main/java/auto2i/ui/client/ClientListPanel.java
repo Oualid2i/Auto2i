@@ -36,11 +36,11 @@ public class ClientListPanel extends JPanel {
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildContent(), BorderLayout.CENTER);
 
-        // ✅ Charge depuis la BDD
+        // Charge depuis la BDD
         reloadAll();
     }
 
-    // ✅ rendu public pour pouvoir rafraîchir depuis l'extérieur
+    // rendu public pour pouvoir rafraîchir depuis l'extérieur
     public void reloadAll() {
         setClients(clientDao.findAll());
     }
@@ -99,7 +99,7 @@ public class ClientListPanel extends JPanel {
         bSearch.setPreferredSize(new Dimension(260, 55));
         bSearch.setFont(bSearch.getFont().deriveFont(Font.BOLD, 18f));
 
-        // ✅ action recherche BDD
+        // action recherche BDD
         bSearch.addActionListener(e -> {
             String q = tfSearch.getText();
             if (q == null || q.isBlank()) {
@@ -138,7 +138,7 @@ public class ClientListPanel extends JPanel {
         listBox.setOpaque(false);
         listBox.setLayout(new BoxLayout(listBox, BoxLayout.Y_AXIS));
 
-        // ✅ scroll
+        // scroll
         JScrollPane sp = new JScrollPane(listBox);
         sp.setBorder(null);
         sp.getViewport().setOpaque(false);

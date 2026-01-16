@@ -57,7 +57,7 @@ public class HomePanel extends JPanel {
         c.gridx = 1; c.gridy = 1;
         center.add(upcoming, c);
 
-        // ✅ Liste dynamique des derniers véhicules
+        // Liste dynamique des derniers véhicules
         vehiculesModel = new DefaultListModel<>();
         vehiculesList = new JList<>(vehiculesModel);
         vehiculesList.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
@@ -65,7 +65,7 @@ public class HomePanel extends JPanel {
         vehiculesList.setSelectionBackground(new Color(255, 153, 51));
         vehiculesList.setSelectionForeground(Color.WHITE);
 
-        // ✅ Renderer : immat — marque modele — km
+        // Renderer : immat — marque modele — km
         vehiculesList.setCellRenderer((list, v, index, isSelected, cellHasFocus) -> {
             JLabel lab = new JLabel();
             String immat = v.getImmat() != null ? v.getImmat() : "-";
@@ -83,7 +83,7 @@ public class HomePanel extends JPanel {
             return lab;
         });
 
-        // ✅ Ouverture fiche : double-clic ou Entrée
+        // Ouverture fiche : double-clic ou Entrée
         Runnable openSelected = () -> {
             Vehicule selected = vehiculesList.getSelectedValue();
             if (selected == null || onOpenVehicule == null) return;
@@ -108,7 +108,7 @@ public class HomePanel extends JPanel {
         JScrollPane sp = new JScrollPane(vehiculesList);
         lastVehicles.add(sp, BorderLayout.CENTER);
 
-        // placeholders autres cards (tu gardes comme avant)
+        // placeholders autres cards
         lastRepairs.add(new JScrollPane(new JList<>(new String[]{
                 "— (à implémenter)"
         })), BorderLayout.CENTER);
@@ -117,7 +117,7 @@ public class HomePanel extends JPanel {
                 "— (à implémenter)"
         })), BorderLayout.CENTER);
 
-        reload(); // ✅ charge dès l’ouverture
+        reload(); // charge dès l’ouverture
     }
 
     public void reload() {

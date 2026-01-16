@@ -23,7 +23,7 @@ public class ClientShowPanel extends JPanel {
 
     private final ClientDao clientDao = new ClientDao();
     private final Consumer<Client> onEdit;
-    private Client client; // ✅ client affiché
+    private Client client;
 
     private final Consumer<Vehicule> onViewVehicule;
     private final VehiculeDao vehiculeDao = new VehiculeDao();
@@ -190,7 +190,6 @@ public class ClientShowPanel extends JPanel {
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
         }
 
-        // ✅ Liaison suppression BDD
         del.addActionListener(e -> onDelete());
         modif.addActionListener(e -> {
             if (client != null && onEdit != null) {
@@ -362,7 +361,7 @@ public class ClientShowPanel extends JPanel {
         tfEmail.setText(c.getEmail());
         tfTel.setText(c.getTelephone());
 
-        reloadVehicules(); // ✅ IMPORTANT
+        reloadVehicules();
     }
 
 }

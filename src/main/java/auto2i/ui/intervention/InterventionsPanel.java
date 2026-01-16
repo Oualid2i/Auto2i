@@ -131,7 +131,6 @@ public class InterventionsPanel extends JPanel {
         c.gridx = 1; c.weightx = 0.50; c.insets = new Insets(0, 12, 0, 0);
         line.add(entretiensCard, c);
 
-        // hauteur proche de ta maquette
         line.setPreferredSize(new Dimension(10, 430));
 
         return line;
@@ -146,7 +145,6 @@ public class InterventionsPanel extends JPanel {
         t.setFont(t.getFont().deriveFont(Font.PLAIN, 14f));
         t.setForeground(Color.DARK_GRAY);
 
-        // zone vide (tu mettras tes rows plus tard)
         JPanel body = new JPanel();
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));

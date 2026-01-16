@@ -43,7 +43,6 @@ public class SidebarPanel extends JPanel {
         add(brand);
         add(Box.createVerticalStrut(20));
 
-        // ✅ IMPORTANT : on remplit les ATTRIBUTS, pas des variables locales
         btnVehicules = createMainButton("  Véhicules", "car.png", false);
         btnVehListe  = createSubButton("Liste");
         btnVehNew    = createSubButton("Nouveau");
@@ -232,7 +231,6 @@ public class SidebarPanel extends JPanel {
                 break;
             case MainFrame.PAGE_HOME:
             default:
-                // option : rien d’actif ou un bouton "Accueil" si tu l’ajoutes
                 break;
         }
 

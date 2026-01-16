@@ -42,7 +42,7 @@ public class ClientNewPanel extends JPanel {
 
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildForm(), BorderLayout.CENTER);
-        add(buildFooter(), BorderLayout.SOUTH); // ✅ comme VehiculeNew
+        add(buildFooter(), BorderLayout.SOUTH);
     }
 
     private JPanel buildTopBar() {
@@ -216,7 +216,6 @@ public class ClientNewPanel extends JPanel {
         save.setPreferredSize(new Dimension(320, 55));
         save.setFont(save.getFont().deriveFont(Font.BOLD, 18f));
 
-        // ✅ Liaison BDD
         save.addActionListener(e -> onSave());
 
         footer.add(save);
@@ -350,18 +349,18 @@ public class ClientNewPanel extends JPanel {
                 BorderFactory.createLineBorder(BORDER, 2, true),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
-        f.setAlignmentX(Component.LEFT_ALIGNMENT); // ✅ important
+        f.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     private void setFieldHeight(JComponent comp, int h) {
         comp.setPreferredSize(new Dimension(10, h));
         comp.setMinimumSize(new Dimension(10, h));
         comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
-        comp.setAlignmentX(Component.LEFT_ALIGNMENT); // ✅ important
+        comp.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     public void resetForm() {
-        editingClient = null; // repasse en mode création
+        editingClient = null;
         tfPrenom.setText("");
         tfNom.setText("");
         tfEmail.setText("");
@@ -397,7 +396,6 @@ public class ClientNewPanel extends JPanel {
         boolean ok = email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
         if (!ok) return false;
 
-        // ✅ si tu veux forcer gmail uniquement :
         // return email.toLowerCase().endsWith("@gmail.com");
 
         return true;
@@ -597,7 +595,5 @@ public class ClientNewPanel extends JPanel {
         doSearch.run();
         dlg.setVisible(true);
     }
-
-
 
 }

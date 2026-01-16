@@ -29,10 +29,7 @@ public class Client {
     @OneToMany(mappedBy = "client",  fetch = FetchType.LAZY)
     private List<Vehicule> vehicules = new ArrayList<>();
 
-    // ✅ constructeur requis par JPA
     protected Client() {}
-
-
 
     public Client(String prenom, String nom, String email, String telephone) {
         this.prenom = prenom;
