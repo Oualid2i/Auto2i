@@ -146,5 +146,22 @@ public class VehiculeDao {
         }
     }
 
+    public List<Vehicule> findLatest(int limit) {
+        EntityManager em = JPAUtil.em();
+        try {
+            return em.createQuery(
+                            "SELECT v FROM Vehicule v " +
+                                    "LEFT JOIN FETCH v.client " +
+                                    "LEFT JOIN FETCH v.typeVehicule tv " +
+                                    "ORDER BY v.id DESC",
+                            Vehicule.class
+                    )
+                    .setMaxResults(limit)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
 
 }

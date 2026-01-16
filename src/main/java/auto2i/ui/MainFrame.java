@@ -10,6 +10,7 @@ import auto2i.ui.panels.SidebarPanel;
 import auto2i.ui.vehicule.VehiculeListPanel;
 import auto2i.ui.vehicule.VehiculeNewPanel;
 import auto2i.ui.vehicule.VehiculeShowPanel;
+import auto2i.ui.home.HomePanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,6 +33,8 @@ public class MainFrame extends JFrame {
     private final JPanel contentCards = new JPanel(cardLayout);
 
     private SidebarPanel sidebar;
+
+    private HomePanel homePanel;
 
     private VehiculeShowPanel vehiculeShowPanel;
     private ClientShowPanel clientShowPanel;
@@ -66,7 +69,12 @@ public class MainFrame extends JFrame {
         body.add(sidebar, BorderLayout.WEST);
 
         // ===== HOME
-        contentCards.add(new HomePanel(), PAGE_HOME);
+        homePanel = new HomePanel(v -> {
+            vehiculeShowPanel.setVehicule(v);
+            showPage(PAGE_VEHICULE_SHOW);
+        });
+        contentCards.add(homePanel, PAGE_HOME);
+
 
         // ===== VEHICULES
         vehiculeShowPanel = new VehiculeShowPanel(
@@ -156,6 +164,10 @@ public class MainFrame extends JFrame {
     }
 
     public void showPage(String pageKey) {
+
+        if (PAGE_HOME.equals(pageKey) && homePanel != null) {
+            homePanel.reload();
+        }
 
         if (PAGE_CLIENT_LIST.equals(pageKey) && clientListPanel != null) {
             clientListPanel.reloadAll();
