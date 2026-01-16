@@ -81,7 +81,6 @@ public class MainFrame extends JFrame {
         );
         contentCards.add(vehiculeShowPanel, PAGE_VEHICULE_SHOW);
 
-        contentCards.add(vehiculeShowPanel, PAGE_VEHICULE_SHOW);
 
         vehiculeListPanel =
                 new VehiculeListPanel(
@@ -108,10 +107,16 @@ public class MainFrame extends JFrame {
                     clientListPanel.reloadAll();
                 },
                 clientToEdit -> {
-                    clientNewPanel.editClient(clientToEdit); // pré-remplir sans reset
+                    clientNewPanel.editClient(clientToEdit);
                     showPage(PAGE_CLIENT_NEW);
+                },
+                veh -> {
+                    vehiculeShowPanel.setVehicule(veh);
+                    showPage(PAGE_VEHICULE_SHOW);
                 }
         );
+
+
 
 
         contentCards.add(clientShowPanel, PAGE_CLIENT_SHOW);

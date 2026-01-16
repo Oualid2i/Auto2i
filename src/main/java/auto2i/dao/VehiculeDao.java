@@ -26,11 +26,20 @@ public class VehiculeDao {
     public Vehicule findById(Long id) {
         EntityManager em = JPAUtil.em();
         try {
-            return em.find(Vehicule.class, id);
+            return em.createQuery(
+                            "SELECT v FROM Vehicule v " +
+                                    "LEFT JOIN FETCH v.client " +
+                                    "LEFT JOIN FETCH v.typeVehicule " +
+                                    "WHERE v.id = :id",
+                            Vehicule.class
+                    )
+                    .setParameter("id", id)
+                    .getSingleResult();
         } finally {
             em.close();
         }
     }
+
 
     public Vehicule findByImmat(String immat) {
         if (immat == null || immat.isBlank()) return null;
@@ -120,4 +129,22 @@ public class VehiculeDao {
             em.close();
         }
     }
+
+    public List<Vehicule> findByClientId(Long clientId) {
+        EntityManager em = JPAUtil.em();
+        try {
+            return em.createQuery(
+                    "SELECT v FROM Vehicule v " +
+                            "LEFT JOIN FETCH v.typeVehicule tv " +
+                            "LEFT JOIN FETCH v.client c " +
+                            "WHERE c.id = :id " +
+                            "ORDER BY v.immat",
+                    Vehicule.class
+            ).setParameter("id", clientId).getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
+
 }

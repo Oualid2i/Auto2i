@@ -4,27 +4,38 @@ import auto2i.dao.ClientDao;
 import auto2i.model.Client;
 import auto2i.ui.components.CardPanel;
 import auto2i.ui.components.RoundedButton;
+import auto2i.dao.VehiculeDao;
+import auto2i.model.Vehicule;
+import auto2i.model.TypeVehicule;
+import java.util.List;
+import java.util.function.Consumer;
+
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.function.Consumer;
 
 import static auto2i.ui.constants.UIConstants.*;
 
 public class ClientShowPanel extends JPanel {
 
     private final Runnable onBack;
-    private final Consumer<Client> onEdit; // ✅ callback modifier
 
     private final ClientDao clientDao = new ClientDao();
+    private final Consumer<Client> onEdit;
     private Client client; // ✅ client affiché
+
+    private final Consumer<Vehicule> onViewVehicule;
+    private final VehiculeDao vehiculeDao = new VehiculeDao();
+
+    private JPanel vehiculesBox;    // conteneur dynamique de la liste
 
     private JTextField tfPrenom, tfNom, tfEmail, tfTel;
 
-    public ClientShowPanel(Runnable onBack, Consumer<Client> onEdit) {
+    public ClientShowPanel(Runnable onBack, Consumer<Client> onEdit, Consumer<Vehicule> onViewVehicule) {
         this.onBack = onBack;
         this.onEdit = onEdit;
+        this.onViewVehicule = onViewVehicule;
 
         setLayout(new BorderLayout());
         setBackground(BG_APP);
@@ -118,19 +129,26 @@ public class ClientShowPanel extends JPanel {
         col.add(Box.createVerticalStrut(10));
 
         CardPanel card = new CardPanel(26, BORDER);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(18, 18, 18, 18));
 
-        // Mock rows (plus tard: charger depuis client.getVehicules())
-        card.add(mockVehiculeRow("AJ-433-BD", "Peugeot", "206", "Essence"));
-        card.add(Box.createVerticalStrut(12));
-        card.add(mockVehiculeRow("GN-432-CL", "Citroen", "C5", "Diesel"));
+        vehiculesBox = new JPanel();
+        vehiculesBox.setOpaque(false);
+        vehiculesBox.setLayout(new BoxLayout(vehiculesBox, BoxLayout.Y_AXIS));
+
+        JScrollPane sp = new JScrollPane(vehiculesBox);
+        sp.setBorder(null);
+        sp.getViewport().setOpaque(false);
+        sp.setOpaque(false);
+        sp.getVerticalScrollBar().setUnitIncrement(16);
+
+        card.add(sp, BorderLayout.CENTER);
 
         col.add(card);
         col.add(Box.createVerticalGlue());
-
         return col;
     }
+
 
     private JComponent mockVehiculeRow(String immat, String marque, String modele, String energie) {
         CardPanel row = new CardPanel(18, BORDER);
@@ -172,15 +190,14 @@ public class ClientShowPanel extends JPanel {
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
         }
 
-        // ✅ bouton Modifier -> callback
+        // ✅ Liaison suppression BDD
+        del.addActionListener(e -> onDelete());
         modif.addActionListener(e -> {
             if (client != null && onEdit != null) {
                 onEdit.accept(client);
             }
         });
 
-        // ✅ Liaison suppression BDD
-        del.addActionListener(e -> onDelete());
 
         p.add(modif);
         p.add(Box.createVerticalStrut(18));
@@ -215,6 +232,73 @@ public class ClientShowPanel extends JPanel {
                     JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    private void reloadVehicules() {
+        if (vehiculesBox == null) return;
+
+        vehiculesBox.removeAll();
+
+        if (client == null || client.getId() == null) {
+            JLabel empty = new JLabel("Aucun client sélectionné");
+            empty.setForeground(Color.GRAY);
+            vehiculesBox.add(empty);
+        } else {
+            List<Vehicule> list = vehiculeDao.findByClientId(client.getId());
+
+            if (list == null || list.isEmpty()) {
+                JLabel empty = new JLabel("Aucun véhicule pour ce client");
+                empty.setForeground(Color.GRAY);
+                vehiculesBox.add(empty);
+            } else {
+                for (Vehicule v : list) {
+                    vehiculesBox.add(buildVehiculeRow(v));
+                    vehiculesBox.add(Box.createVerticalStrut(12));
+                }
+            }
+        }
+
+        vehiculesBox.revalidate();
+        vehiculesBox.repaint();
+    }
+
+    private JComponent buildVehiculeRow(Vehicule v) {
+        CardPanel row = new CardPanel(18, BORDER);
+        row.setLayout(new BorderLayout());
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+        row.setPreferredSize(new Dimension(10, 70));
+        row.setBorder(new EmptyBorder(12, 16, 12, 16));
+
+        TypeVehicule tv = v.getTypeVehicule();
+
+        String immat = (v.getImmat() != null) ? v.getImmat() : "-";
+        String marque = (tv != null && tv.getMarque() != null) ? tv.getMarque() : "-";
+        String modele = (tv != null && tv.getModele() != null) ? tv.getModele() : "-";
+        String energie = (tv != null && tv.getEnergie() != null) ? tv.getEnergie().toString() : "-";
+
+        JPanel grid = new JPanel(new GridLayout(1, 4, 18, 0));
+        grid.setOpaque(false);
+        grid.add(new JLabel(immat));
+        grid.add(new JLabel(marque));
+        grid.add(new JLabel(modele));
+        grid.add(new JLabel(energie));
+
+        RoundedButton see = new RoundedButton("Voir", ORANGE_MAIN, Color.WHITE, 20);
+        see.setPreferredSize(new Dimension(120, 46));
+        see.setFont(see.getFont().deriveFont(Font.BOLD, 16f));
+
+        see.addActionListener(e -> {
+            if (onViewVehicule == null) return;
+
+            Vehicule fresh = vehiculeDao.findById(v.getId());
+            onViewVehicule.accept(fresh);
+        });
+
+
+        row.add(grid, BorderLayout.CENTER);
+        row.add(see, BorderLayout.EAST);
+        return row;
+    }
+
 
     // ===== helpers gauche
     private JPanel columnPanel() {
@@ -277,5 +361,8 @@ public class ClientShowPanel extends JPanel {
         tfNom.setText(c.getNom());
         tfEmail.setText(c.getEmail());
         tfTel.setText(c.getTelephone());
+
+        reloadVehicules(); // ✅ IMPORTANT
     }
+
 }
