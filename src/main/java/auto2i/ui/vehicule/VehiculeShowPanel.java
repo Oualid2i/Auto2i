@@ -1,12 +1,18 @@
 package auto2i.ui.vehicule;
 
+import auto2i.model.Client;
+import auto2i.model.TypeVehicule;
 import auto2i.model.Vehicule;
 import auto2i.ui.components.CardPanel;
 import auto2i.ui.components.RoundedButton;
+import auto2i.dao.VehiculeDao;
+import java.util.function.Consumer;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import static auto2i.ui.constants.UIConstants.*;
 import static auto2i.ui.constants.UIIcons.*;
@@ -14,15 +20,20 @@ import static auto2i.ui.constants.UIIcons.*;
 public class VehiculeShowPanel extends JPanel {
 
     private final Runnable onBack;
+    private final Consumer<Vehicule> onEdit;
 
-    // champs affichage
+    private final VehiculeDao vehiculeDao = new VehiculeDao();
+    private Vehicule vehicule; // véhicule affiché
+
+
     private JTextField tfImmat, tfMarque, tfModele, tfDate, tfDernierKm, tfEnergie, tfBoite;
     private JTextField tfNbPortes, tfNbPlaces, tfPuissance, tfClient;
 
     private JLabel lblIntervDate, lblIntervType;
 
-    public VehiculeShowPanel(Runnable onBack) {
+    public VehiculeShowPanel(Runnable onBack, Consumer<Vehicule> onEdit) {
         this.onBack = onBack;
+        this.onEdit = onEdit;
 
         setLayout(new BorderLayout());
         setBackground(BG_APP);
@@ -32,7 +43,6 @@ public class VehiculeShowPanel extends JPanel {
         add(buildContent(), BorderLayout.CENTER);
     }
 
-    // ================= TOP BAR =================
     private JPanel buildTopBar() {
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
@@ -56,7 +66,6 @@ public class VehiculeShowPanel extends JPanel {
         return top;
     }
 
-    // ================= CONTENT (4 colonnes + client en bas sur 3 colonnes) =================
     private JComponent buildContent() {
         JPanel wrap = new JPanel(new GridBagLayout());
         wrap.setOpaque(false);
@@ -66,28 +75,19 @@ public class VehiculeShowPanel extends JPanel {
         c.fill = GridBagConstraints.BOTH;
         c.anchor = GridBagConstraints.NORTHWEST;
 
-        JPanel col1 = buildLeftInfos();       // immat / date / km
-        JPanel col2 = buildMiddleInfos();     // marque / modèle / énergie / boite
-        JPanel col3 = buildSmallFields();     // nb portes / nb places / puissance
-        JPanel col4 = buildRightActions();    // interventions + boutons
+        JPanel col1 = buildLeftInfos();
+        JPanel col2 = buildMiddleInfos();
+        JPanel col3 = buildSmallFields();
+        JPanel col4 = buildRightActions();
 
-        // ===== Ligne 0 : 4 colonnes =====
         c.gridy = 0;
         c.weighty = 0.0;
 
-        c.gridx = 0; c.weightx = 0.30;
-        wrap.add(col1, c);
+        c.gridx = 0; c.weightx = 0.30; wrap.add(col1, c);
+        c.gridx = 1; c.weightx = 0.27; wrap.add(col2, c);
+        c.gridx = 2; c.weightx = 0.15; wrap.add(col3, c);
+        c.gridx = 3; c.weightx = 0.28; wrap.add(col4, c);
 
-        c.gridx = 1; c.weightx = 0.27;
-        wrap.add(col2, c);
-
-        c.gridx = 2; c.weightx = 0.15;
-        wrap.add(col3, c);
-
-        c.gridx = 3; c.weightx = 0.28;
-        wrap.add(col4, c);
-
-        // ===== Ligne 1 : Client (span 3 colonnes, comme la mockup) =====
         JPanel clientLine = buildClientLine();
         c.gridy = 1;
         c.gridx = 0;
@@ -98,13 +98,11 @@ public class VehiculeShowPanel extends JPanel {
         c.insets = new Insets(8, 18, 0, 18);
         wrap.add(clientLine, c);
 
-        // case vide sous la colonne 4 pour garder l’alignement
         c.gridx = 3;
         c.gridwidth = 1;
         c.weightx = 0.0;
         wrap.add(Box.createVerticalStrut(1), c);
 
-        // ===== Ligne 2 : filler pour pousser en haut =====
         c.gridy = 2;
         c.gridx = 0;
         c.gridwidth = 4;
@@ -117,7 +115,6 @@ public class VehiculeShowPanel extends JPanel {
         return wrap;
     }
 
-    // ================= COLONNE 1 =================
     private JPanel buildLeftInfos() {
         JPanel col = columnPanel();
 
@@ -134,7 +131,6 @@ public class VehiculeShowPanel extends JPanel {
         return col;
     }
 
-    // ================= COLONNE 2 =================
     private JPanel buildMiddleInfos() {
         JPanel col = columnPanel();
 
@@ -145,16 +141,15 @@ public class VehiculeShowPanel extends JPanel {
         col.add(labeledField("Modèle", tfModele, COL2_W));
 
         tfEnergie = makeReadField();
-        col.add(labeledField("énergie", tfEnergie, COL2_W));
+        col.add(labeledField("Énergie", tfEnergie, COL2_W));
 
         tfBoite = makeReadField();
-        col.add(labeledField("Boite", tfBoite, COL2_W));
+        col.add(labeledField("Boîte", tfBoite, COL2_W));
 
         col.add(Box.createVerticalGlue());
         return col;
     }
 
-    // ================= COLONNE 3 (petits champs) =================
     private JPanel buildSmallFields() {
         JPanel col = columnPanel();
 
@@ -171,7 +166,6 @@ public class VehiculeShowPanel extends JPanel {
         return col;
     }
 
-    // ================= COLONNE 4 (interventions + boutons) =================
     private JPanel buildRightActions() {
         JPanel col = columnPanel();
 
@@ -192,8 +186,8 @@ public class VehiculeShowPanel extends JPanel {
         header.setOpaque(false);
         header.setBorder(new EmptyBorder(12, 14, 0, 14));
 
-        lblIntervDate = new JLabel("12/03/2025");
-        lblIntervType = new JLabel("Entretien", SwingConstants.RIGHT);
+        lblIntervDate = new JLabel("—");
+        lblIntervType = new JLabel("—", SwingConstants.RIGHT);
 
         header.add(lblIntervDate, BorderLayout.WEST);
         header.add(lblIntervType, BorderLayout.EAST);
@@ -207,11 +201,20 @@ public class VehiculeShowPanel extends JPanel {
         RoundedButton bModif    = new RoundedButton("Modifier", ORANGE_MAIN, Color.WHITE, 20);
         RoundedButton bDelete   = new RoundedButton("Effacer", ORANGE_MAIN, Color.WHITE, 20);
 
+        bAddInter.addActionListener(e ->
+                JOptionPane.showMessageDialog(this, "Interventions : à implémenter ...")
+        );
+        //  listeners AVANT le return
+        bModif.addActionListener(e -> {
+            if (vehicule != null && onEdit != null) onEdit.accept(vehicule);
+        });
+        bDelete.addActionListener(e -> onDelete());
+
         Dimension btnSize = new Dimension(320, 54);
         for (RoundedButton b : new RoundedButton[]{bAddInter, bModif, bDelete}) {
             b.setPreferredSize(btnSize);
             b.setMinimumSize(btnSize);
-            b.setMaximumSize(btnSize); // empêche le collapse
+            b.setMaximumSize(btnSize);
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
             b.setFont(b.getFont().deriveFont(Font.BOLD, 18f));
         }
@@ -229,11 +232,10 @@ public class VehiculeShowPanel extends JPanel {
 
         col.add(buttons);
         col.add(Box.createVerticalGlue());
-
         return col;
     }
 
-    // ================= CLIENT LINE (bas, sur 3 colonnes) =================
+
     private JPanel buildClientLine() {
         JPanel p = new JPanel();
         p.setOpaque(false);
@@ -249,7 +251,6 @@ public class VehiculeShowPanel extends JPanel {
         line.setOpaque(false);
         line.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // largeur = COL1 + COL2 + COL3 + (petit espace visuel)
         int clientW = COL1_W + COL2_W + 140;
         line.setPreferredSize(new Dimension(clientW, FIELD_H));
         line.setMaximumSize(new Dimension(clientW, FIELD_H));
@@ -273,11 +274,9 @@ public class VehiculeShowPanel extends JPanel {
         p.add(l);
         p.add(Box.createVerticalStrut(6));
         p.add(line);
-
         return p;
     }
 
-    // ================= HELPERS UI =================
     private JPanel columnPanel() {
         JPanel p = new JPanel();
         p.setOpaque(false);
@@ -307,7 +306,6 @@ public class VehiculeShowPanel extends JPanel {
         JLabel l = new JLabel(label);
         l.setFont(l.getFont().deriveFont(Font.PLAIN, 16f));
         l.setForeground(Color.DARK_GRAY);
-        l.setHorizontalAlignment(SwingConstants.LEFT);
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         setFixedSize(field, width, FIELD_H);
@@ -328,7 +326,6 @@ public class VehiculeShowPanel extends JPanel {
         JLabel l = new JLabel(label);
         l.setFont(l.getFont().deriveFont(Font.PLAIN, 16f));
         l.setForeground(Color.DARK_GRAY);
-        l.setHorizontalAlignment(SwingConstants.LEFT);
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel line = new JPanel(new BorderLayout());
@@ -362,24 +359,86 @@ public class VehiculeShowPanel extends JPanel {
         c.setPreferredSize(d);
         c.setMinimumSize(d);
         c.setMaximumSize(d);
-
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     // ================= API: afficher un véhicule =================
     public void setVehicule(Vehicule v) {
+        this.vehicule = v;
         if (v == null) return;
 
-        tfImmat.setText(v.getImmat());
-        tfMarque.setText(v.getMarque());
-        tfModele.setText(v.getModele());
-        tfDate.setText(v.getDateCirculation());
-        tfDernierKm.setText(v.getDernierKm());
-        tfEnergie.setText(v.getEnergie());
-        tfBoite.setText(v.getBoite());
-        tfNbPortes.setText(v.getNbPortes());
-        tfNbPlaces.setText(v.getNbPlaces());
-        tfPuissance.setText(v.getPuissance());
-        tfClient.setText(v.getClient());
+        tfImmat.setText(nvl(v.getImmat()));
+        tfDate.setText(formatDate(v.getDateMiseEnCirculation()));
+        tfDernierKm.setText(v.getDernierKilometrage() != null ? String.valueOf(v.getDernierKilometrage()) : "");
+
+        TypeVehicule tv = v.getTypeVehicule();
+        if (tv != null) {
+            tfMarque.setText(nvl(tv.getMarque()));
+            tfModele.setText(nvl(tv.getModele()));
+            tfEnergie.setText(prettyEnum(tv.getEnergie()));
+            tfBoite.setText(prettyEnum(tv.getBoiteVitesse()));
+
+            tfNbPortes.setText(tv.getNbPortes() != null ? String.valueOf(tv.getNbPortes()) : "");
+            tfNbPlaces.setText(tv.getNbPlaces() != null ? String.valueOf(tv.getNbPlaces()) : "");
+            tfPuissance.setText(tv.getPuissance() != null ? String.valueOf(tv.getPuissance()) : "");
+        } else {
+            tfMarque.setText("");
+            tfModele.setText("");
+            tfEnergie.setText("");
+            tfBoite.setText("");
+            tfNbPortes.setText("");
+            tfNbPlaces.setText("");
+            tfPuissance.setText("");
+        }
+
+        Client c = v.getClient();
+        if (c != null) {
+            tfClient.setText((nvl(c.getPrenom()) + " " + nvl(c.getNom())).trim());
+        } else {
+            tfClient.setText("");
+        }
     }
+
+    private String nvl(String s) { return (s == null) ? "" : s; }
+
+    private String prettyEnum(Object o) {
+        if (o == null) return "";
+        String s = o.toString().replace('_', ' ').toLowerCase();
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    private String formatDate(LocalDate d) {
+        if (d == null) return "";
+        return d.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+
+
+    private void onDelete() {
+        if (vehicule == null || vehicule.getId() == null) return;
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Supprimer le véhicule \"" + nvl(vehicule.getImmat()) + "\" ?",
+                "Confirmation",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            vehiculeDao.delete(vehicule.getId());
+
+            JOptionPane.showMessageDialog(this,
+                    "Véhicule supprimé ✅",
+                    "OK",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            if (onBack != null) onBack.run();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Erreur lors de la suppression :\n" + ex.getMessage(),
+                    "Erreur BDD",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
 }

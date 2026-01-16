@@ -9,6 +9,8 @@
 
         <class>auto2i.model.Vehicule</class>
         <class>auto2i.model.Client</class>
+        <class>auto2i.model.TypeVehicule</class>
+
 
         <!-- Les entités seront détectées automatiquement -->
         <properties>

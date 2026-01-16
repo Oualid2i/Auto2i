@@ -1,6 +1,8 @@
 package auto2i.model;
 
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -24,11 +26,13 @@ public class Client {
     @Column(name = "telephone")
     private String telephone;
 
-    @OneToMany(mappedBy = "client")
-    private List<Vehicule> vehicules;
+    @OneToMany(mappedBy = "client",  fetch = FetchType.LAZY)
+    private List<Vehicule> vehicules = new ArrayList<>();
 
     // ✅ constructeur requis par JPA
     protected Client() {}
+
+
 
     public Client(String prenom, String nom, String email, String telephone) {
         this.prenom = prenom;
@@ -75,5 +79,15 @@ public class Client {
 
     public List<Vehicule> getVehicules() {
         return vehicules;
+    }
+
+    public void addVehicule(Vehicule v) {
+        vehicules.add(v);
+        v.setClient(this);
+    }
+
+    public void removeVehicule(Vehicule v) {
+        vehicules.remove(v);
+        v.setClient(null);
     }
 }

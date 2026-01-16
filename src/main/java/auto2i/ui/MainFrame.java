@@ -69,10 +69,21 @@ public class MainFrame extends JFrame {
         contentCards.add(new HomePanel(), PAGE_HOME);
 
         // ===== VEHICULES
-        vehiculeShowPanel = new VehiculeShowPanel(() -> showPage(PAGE_VEHICULE_LIST));
+        vehiculeShowPanel = new VehiculeShowPanel(
+                () -> {
+                    showPage(PAGE_VEHICULE_LIST);
+                    if (vehiculeListPanel != null) vehiculeListPanel.reloadAll();
+                },
+                vehToEdit -> {
+                    vehiculeNewPanel.editVehicule(vehToEdit); // à ajouter comme pour client
+                    showPage(PAGE_VEHICULE_NEW);
+                }
+        );
         contentCards.add(vehiculeShowPanel, PAGE_VEHICULE_SHOW);
 
-        contentCards.add(
+        contentCards.add(vehiculeShowPanel, PAGE_VEHICULE_SHOW);
+
+        vehiculeListPanel =
                 new VehiculeListPanel(
                         () -> showPage(PAGE_HOME),
                         () -> showPage(PAGE_VEHICULE_NEW),
@@ -80,11 +91,15 @@ public class MainFrame extends JFrame {
                             vehiculeShowPanel.setVehicule(v);
                             showPage(PAGE_VEHICULE_SHOW);
                         }
-                ),
-                PAGE_VEHICULE_LIST
-        );
+                );
+        contentCards.add(vehiculeListPanel, PAGE_VEHICULE_LIST);
 
-        contentCards.add(new VehiculeNewPanel(() -> showPage(PAGE_VEHICULE_LIST)), PAGE_VEHICULE_NEW);
+
+        vehiculeNewPanel = new VehiculeNewPanel(() -> {
+            showPage(PAGE_VEHICULE_LIST);
+            if (vehiculeListPanel != null) vehiculeListPanel.reloadAll();
+        });
+        contentCards.add(vehiculeNewPanel, PAGE_VEHICULE_NEW);
 
 // ===== CLIENTS
         clientShowPanel = new ClientShowPanel(
@@ -137,9 +152,12 @@ public class MainFrame extends JFrame {
 
     public void showPage(String pageKey) {
 
-        // Quand on ouvre la liste, on recharge la BDD
         if (PAGE_CLIENT_LIST.equals(pageKey) && clientListPanel != null) {
             clientListPanel.reloadAll();
+        }
+
+        if (PAGE_VEHICULE_LIST.equals(pageKey) && vehiculeListPanel != null) {
+            vehiculeListPanel.reloadAll();
         }
 
         cardLayout.show(contentCards, pageKey);
@@ -152,6 +170,7 @@ public class MainFrame extends JFrame {
             sidebar.setActive(pageKey);
         }
     }
+
 
 
 

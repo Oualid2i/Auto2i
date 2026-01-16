@@ -1,45 +1,63 @@
 package auto2i.model;
 
-public class Vehicule {
-    private final String immat;
-    private final String marque;
-    private final String modele;
-    private final String dateCirculation;
-    private final String dernierKm;
-    private final String energie;
-    private final String boite;
-    private final String nbPortes;
-    private final String nbPlaces;
-    private final String puissance;
-    private final String client;
+import jakarta.persistence.*;
+import java.time.LocalDate;
 
-    public Vehicule(String immat, String marque, String modele,
-                    String dateCirculation, String dernierKm,
-                    String energie, String boite,
-                    String nbPortes, String nbPlaces, String puissance,
-                    String client) {
+@Entity
+@Table(name = "vehicule")
+public class Vehicule {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_vehicule")
+    private Long id;
+
+    @Column(name = "immatriculation", nullable = false, unique = true)
+    private String immat;
+
+    @Column(name = "date_mise_en_circ", nullable = false)
+    private LocalDate dateMiseEnCirculation;
+
+    @Column(name = "dernier_kilometrage", nullable = false)
+    private Integer dernierKilometrage;
+
+    // lien vers Client (colonne id_client dans vehicule)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_client", nullable = false)
+    private Client client;
+
+    // lien vers TypeVehicule (colonne id_type_vehicule dans vehicule)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_type_vehicule", nullable = false)
+    private TypeVehicule typeVehicule;
+
+    protected Vehicule() {}
+
+    public Vehicule(String immat, LocalDate dateMiseEnCirculation, Integer dernierKilometrage,
+                    Client client, TypeVehicule typeVehicule) {
         this.immat = immat;
-        this.marque = marque;
-        this.modele = modele;
-        this.dateCirculation = dateCirculation;
-        this.dernierKm = dernierKm;
-        this.energie = energie;
-        this.boite = boite;
-        this.nbPortes = nbPortes;
-        this.nbPlaces = nbPlaces;
-        this.puissance = puissance;
+        this.dateMiseEnCirculation = dateMiseEnCirculation;
+        this.dernierKilometrage = dernierKilometrage;
         this.client = client;
+        this.typeVehicule = typeVehicule;
     }
 
+    public Long getId() { return id; }
     public String getImmat() { return immat; }
-    public String getMarque() { return marque; }
-    public String getModele() { return modele; }
-    public String getDateCirculation() { return dateCirculation; }
-    public String getDernierKm() { return dernierKm; }
-    public String getEnergie() { return energie; }
-    public String getBoite() { return boite; }
-    public String getNbPortes() { return nbPortes; }
-    public String getNbPlaces() { return nbPlaces; }
-    public String getPuissance() { return puissance; }
-    public String getClient() { return client; }
+    public LocalDate getDateMiseEnCirculation() { return dateMiseEnCirculation; }
+    public Integer getDernierKilometrage() { return dernierKilometrage; }
+
+    public Client getClient() { return client; }
+    public TypeVehicule getTypeVehicule() { return typeVehicule; }
+
+    public void setClient(Client client) { this.client = client; }
+    public void setTypeVehicule(TypeVehicule typeVehicule) { this.typeVehicule = typeVehicule; }
+
+    public void setImmat(String immat) {}
+
+    public void setDateMiseEnCirculation(LocalDate date) {
+    }
+
+    public void setDernierKilometrage(int km) {
+    }
 }

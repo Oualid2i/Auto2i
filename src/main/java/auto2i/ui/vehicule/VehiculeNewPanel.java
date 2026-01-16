@@ -1,17 +1,36 @@
 package auto2i.ui.vehicule;
 
+import auto2i.dao.ClientDao;
+import auto2i.dao.TypeVehiculeDao;
+import auto2i.dao.VehiculeDao;
+import auto2i.Enum.*;
+import auto2i.model.Client;
+import auto2i.model.TypeVehicule;
+import auto2i.model.Vehicule;
 import auto2i.ui.components.RoundedButton;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.*;
 import java.awt.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 
 import static auto2i.ui.constants.UIConstants.*;
-import static auto2i.ui.constants.UIIcons.*; // load(...)
+import static auto2i.ui.constants.UIIcons.*;
 
 public class VehiculeNewPanel extends JPanel {
 
     private final Runnable onBack;
+
+    // DAO
+    private final ClientDao clientDao = new ClientDao();
+    private final VehiculeDao vehiculeDao = new VehiculeDao();
+
+    // Valeur sélectionnée
+    private Long selectedClientId = null;
 
     // Champs
     private JTextField tfImmat;
@@ -26,8 +45,11 @@ public class VehiculeNewPanel extends JPanel {
     private JTextField tfDateCirculation;
     private JTextField tfClient;
 
-    private JComboBox<String> cbEnergie;
-    private JComboBox<String> cbBoite;
+    // ✅ enums (pas String)
+    private JComboBox<Energie> cbEnergie;
+    private JComboBox<TypeBoite> cbBoite;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public VehiculeNewPanel(Runnable onBack) {
         this.onBack = onBack;
@@ -39,6 +61,8 @@ public class VehiculeNewPanel extends JPanel {
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildForm(), BorderLayout.CENTER);
         add(buildFooter(), BorderLayout.SOUTH);
+
+        installValidators();
     }
 
     // ================= TOP BAR =================
@@ -80,19 +104,13 @@ public class VehiculeNewPanel extends JPanel {
         JPanel col2 = buildCol2();
         JPanel col3 = buildCol3();
 
-        // Col1 (large)
-        c.gridx = 0; c.weightx = 0.45;
-        c.insets = new Insets(10, 10, 10, 25);
+        c.gridx = 0; c.weightx = 0.45; c.insets = new Insets(10, 10, 10, 25);
         wrap.add(col1, c);
 
-        // Col2 (moyenne)
-        c.gridx = 1; c.weightx = 0.40;
-        c.insets = new Insets(10, 0, 10, 25);
+        c.gridx = 1; c.weightx = 0.40; c.insets = new Insets(10, 0, 10, 25);
         wrap.add(col2, c);
 
-        // Col3 (petite)
-        c.gridx = 2; c.weightx = 0.15;
-        c.insets = new Insets(10, 0, 10, 10);
+        c.gridx = 2; c.weightx = 0.15; c.insets = new Insets(10, 0, 10, 10);
         wrap.add(col3, c);
 
         return wrap;
@@ -105,13 +123,15 @@ public class VehiculeNewPanel extends JPanel {
         col.add(labeledTextField("Immatriculation", tfImmat, "AA-123-BB"));
 
         tfDateCirculation = new JTextField();
-        col.add(labeledDateField("Date mise en circulation", tfDateCirculation, "23 - 01 - 1998"));
+        col.add(labeledDateField("Date mise en circulation", tfDateCirculation, "dd/MM/yyyy"));
 
         tfDernierKm = new JTextField();
-        col.add(labeledTextField("Dernier kilométrage", tfDernierKm, "30 000 km"));
+        col.add(labeledTextField("Dernier kilométrage", tfDernierKm, "ex: 180000"));
 
         tfClient = new JTextField();
-        col.add(labeledClientField("Client", tfClient, "John Doe"));
+        tfClient.setEditable(false);
+        tfClient.setBackground(Color.WHITE);
+        col.add(labeledClientField("Client", tfClient, "Cliquer sur la loupe"));
 
         col.add(Box.createVerticalGlue());
         return col;
@@ -126,10 +146,10 @@ public class VehiculeNewPanel extends JPanel {
         tfModele = new JTextField();
         col.add(labeledTextField("Modèle", tfModele, "206"));
 
-        cbEnergie = new JComboBox<>(new String[]{"Essence", "Diesel", "Hybride", "Électrique"});
+        cbEnergie = new JComboBox<>(Energie.values());
         col.add(labeledCombo("Énergie", cbEnergie));
 
-        cbBoite = new JComboBox<>(new String[]{"Manuelle", "Automatique"});
+        cbBoite = new JComboBox<>(TypeBoite.values());
         col.add(labeledCombo("Boîte", cbBoite));
 
         col.add(Box.createVerticalGlue());
@@ -140,19 +160,19 @@ public class VehiculeNewPanel extends JPanel {
         JPanel col = columnPanel();
 
         tfNbPortes = new JTextField();
-        col.add(labeledTextField("Nb portes", tfNbPortes, "5"));
+        col.add(labeledTextField("Nb portes", tfNbPortes, "ex: 5"));
 
         tfNbPlaces = new JTextField();
-        col.add(labeledTextField("Nb places", tfNbPlaces, "5"));
+        col.add(labeledTextField("Nb places", tfNbPlaces, "ex: 5"));
 
         tfPuissance = new JTextField();
-        col.add(labeledTextField("Puissance", tfPuissance, "110 ch"));
+        col.add(labeledTextField("Puissance", tfPuissance, "ex: 110"));
 
         col.add(Box.createVerticalGlue());
         return col;
     }
 
-    // ================= FOOTER (bouton indépendant) =================
+    // ================= FOOTER =================
     private JComponent buildFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         footer.setOpaque(false);
@@ -162,8 +182,238 @@ public class VehiculeNewPanel extends JPanel {
         save.setPreferredSize(new Dimension(220, 55));
         save.setFont(save.getFont().deriveFont(Font.BOLD, 18f));
 
+        save.addActionListener(e -> onSave()); // enregistrement réel
+
         footer.add(save);
         return footer;
+    }
+
+    // ================== POPUP CLIENT ==================
+    private void openClientPicker() {
+        JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(this), "Choisir un client", Dialog.ModalityType.APPLICATION_MODAL);
+        dlg.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        dlg.setSize(650, 480);
+        dlg.setLocationRelativeTo(this);
+
+        JPanel root = new JPanel(new BorderLayout(10, 10));
+        root.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+        JTextField tf = new JTextField();
+        JButton bSearch = new JButton("Chercher");
+        JPanel top = new JPanel(new BorderLayout(10, 0));
+        top.add(tf, BorderLayout.CENTER);
+        top.add(bSearch, BorderLayout.EAST);
+
+        DefaultListModel<Client> model = new DefaultListModel<>();
+        JList<Client> list = new JList<>(model);
+
+        list.setCellRenderer((jList, value, index, isSelected, cellHasFocus) -> {
+            JLabel lab = new JLabel();
+            String txt = value.getPrenom() + " " + value.getNom();
+            if (value.getEmail() != null && !value.getEmail().isBlank()) txt += " — " + value.getEmail();
+            lab.setText(txt);
+            lab.setOpaque(true);
+            lab.setBorder(new EmptyBorder(8, 10, 8, 10));
+            lab.setBackground(isSelected ? new Color(230, 240, 255) : Color.WHITE);
+            return lab;
+        });
+
+        JScrollPane sp = new JScrollPane(list);
+
+        JButton bOk = new JButton("Sélectionner");
+        JButton bCancel = new JButton("Annuler");
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottom.add(bCancel);
+        bottom.add(bOk);
+
+        Runnable doSearch = () -> {
+            model.clear();
+            String q = tf.getText();
+            List<Client> res = (q == null || q.isBlank()) ? clientDao.findAll() : clientDao.search(q);
+            for (Client c : res) model.addElement(c);
+        };
+
+        bSearch.addActionListener(e -> doSearch.run());
+        tf.addActionListener(e -> doSearch.run());
+
+        bCancel.addActionListener(e -> dlg.dispose());
+
+        bOk.addActionListener(e -> {
+            Client selected = list.getSelectedValue();
+            if (selected == null) {
+                JOptionPane.showMessageDialog(dlg, "Sélectionne un client dans la liste.");
+                return;
+            }
+            selectedClientId = selected.getId();
+            tfClient.setText(selected.getPrenom() + " " + selected.getNom());
+            dlg.dispose();
+        });
+
+        list.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) bOk.doClick();
+            }
+        });
+
+        root.add(top, BorderLayout.NORTH);
+        root.add(sp, BorderLayout.CENTER);
+        root.add(bottom, BorderLayout.SOUTH);
+
+        dlg.setContentPane(root);
+        doSearch.run();
+        dlg.setVisible(true);
+    }
+
+    // ================= VALIDATIONS =================
+    private void installValidators() {
+        tfImmat.setInputVerifier(new RegexVerifier(
+                "^[A-Z]{2}-\\d{3}-[A-Z]{2}$",
+                "Immatriculation invalide (ex: AA-123-BB)"
+        ));
+
+        tfDateCirculation.setInputVerifier(new InputVerifier() {
+            @Override public boolean verify(JComponent input) {
+                String s = ((JTextField) input).getText().trim();
+                if (s.isEmpty()) return false;
+                try { LocalDate.parse(s, DATE_FMT); return true; }
+                catch (DateTimeParseException ex) {
+                    JOptionPane.showMessageDialog(VehiculeNewPanel.this, "Date invalide (format attendu: dd/MM/yyyy)");
+                    return false;
+                }
+            }
+        });
+
+        onlyDigits(tfDernierKm);
+        onlyDigits(tfNbPortes);
+        onlyDigits(tfNbPlaces);
+        onlyDigits(tfPuissance);
+    }
+
+    private boolean validateForm() {
+        if (!tfImmat.getInputVerifier().verify(tfImmat)) return false;
+        if (!tfDateCirculation.getInputVerifier().verify(tfDateCirculation)) return false;
+
+        if (tfImmat.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Immatriculation obligatoire."); return false; }
+        if (selectedClientId == null) { JOptionPane.showMessageDialog(this, "Choisis un client (loupe)."); return false; }
+
+        if (tfMarque.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Marque obligatoire."); return false; }
+        if (tfModele.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Modèle obligatoire."); return false; }
+        if (tfDernierKm.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Dernier kilométrage obligatoire."); return false; }
+        if (tfNbPortes.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Nb portes obligatoire."); return false; }
+        if (tfNbPlaces.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Nb places obligatoire."); return false; }
+        if (tfPuissance.getText().isBlank()) { JOptionPane.showMessageDialog(this, "Puissance obligatoire."); return false; }
+
+        return true;
+    }
+
+    private void onSave() {
+        if (!validateForm()) return;
+
+        try {
+            // 1) normaliser / lire champs
+            String immat = tfImmat.getText().trim().toUpperCase();
+            LocalDate date = LocalDate.parse(tfDateCirculation.getText().trim(), DATE_FMT);
+
+            int km = Integer.parseInt(tfDernierKm.getText().trim());
+            int nbPortes = Integer.parseInt(tfNbPortes.getText().trim());
+            int nbPlaces = Integer.parseInt(tfNbPlaces.getText().trim());
+            int puissance = Integer.parseInt(tfPuissance.getText().trim());
+
+            String marque = tfMarque.getText().trim();
+            String modele = tfModele.getText().trim();
+
+            Energie energie = (Energie) cbEnergie.getSelectedItem();
+            TypeBoite boite = (TypeBoite) cbBoite.getSelectedItem();
+
+            // 2) immat unique (avant transaction)
+            Vehicule existing = vehiculeDao.findByImmat(immat);
+            if (existing != null) {
+                // si création -> interdit
+                if (vehiculeEditingId == null) {
+                    throw new IllegalArgumentException("Cette immatriculation existe déjà.");
+                }
+                // si édition -> interdit seulement si c’est un autre véhicule
+                if (!existing.getId().equals(vehiculeEditingId)) {
+                    throw new IllegalArgumentException("Cette immatriculation existe déjà.");
+                }
+            }
+
+
+            // 3) récupérer client
+            Client client = clientDao.findById(selectedClientId);
+            if (client == null) {
+                throw new IllegalArgumentException("Client introuvable (re-sélectionne le client).");
+            }
+
+            // 4) type véhicule : find or create
+            TypeVehicule tv = TypeVehiculeDao.findExisting(marque, modele, energie, boite, nbPortes, nbPlaces, puissance);
+            if (tv == null) {
+                tv = new TypeVehicule(marque, modele, energie, boite, nbPortes, nbPlaces, puissance);
+                TypeVehiculeDao.save(tv);
+            }
+
+            // 5) créer / mettre à jour véhicule
+            if (vehiculeEditingId == null) {
+
+                // création
+                Vehicule v = new Vehicule(immat, date, km, client, tv);
+                vehiculeDao.save(v);
+
+            } else {
+
+                // modification
+                Vehicule v = vehiculeDao.findById(vehiculeEditingId);
+                if (v == null) {
+                    throw new IllegalArgumentException("Véhicule introuvable.");
+                }
+
+                // ⚠️ si tu autorises la modification de l’immat :
+                // - soit tu ne fais pas le check d’unicité pour le même véhicule
+                // - soit tu vérifies que l’immat n’appartient pas à un autre véhicule
+                v.setImmat(immat);
+                v.setDateMiseEnCirculation(date);
+                v.setDernierKilometrage(km);
+                v.setClient(client);
+                v.setTypeVehicule(tv);
+
+                vehiculeDao.update(v);
+            }
+
+
+            JOptionPane.showMessageDialog(this, "Véhicule enregistré ✅");
+
+            resetForm();
+            if (onBack != null) onBack.run();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void onlyDigits(JTextField tf) {
+        ((AbstractDocument) tf.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                if (string != null && string.matches("\\d+")) super.insertString(fb, offset, string, attr);
+            }
+            @Override public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                if (text == null || text.isEmpty() || text.matches("\\d+")) super.replace(fb, offset, length, text, attrs);
+            }
+        });
+    }
+
+    private static class RegexVerifier extends InputVerifier {
+        private final String regex;
+        private final String message;
+        RegexVerifier(String regex, String message) { this.regex = regex; this.message = message; }
+
+        @Override public boolean verify(JComponent input) {
+            String s = ((JTextField) input).getText().trim().toUpperCase();
+            if (s.isEmpty()) return false;
+            boolean ok = s.matches(regex);
+            if (!ok) JOptionPane.showMessageDialog(input, message);
+            else ((JTextField) input).setText(s);
+            return ok;
+        }
     }
 
     // ================= UI helpers =================
@@ -182,7 +432,6 @@ public class VehiculeNewPanel extends JPanel {
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel l = labelLeft(label);
-
         styleField(field, placeholder);
         setFieldHeight(field, FIELD_H);
 
@@ -193,7 +442,7 @@ public class VehiculeNewPanel extends JPanel {
         return p;
     }
 
-    private JPanel labeledCombo(String label, JComboBox<String> combo) {
+    private JPanel labeledCombo(String label, JComboBox<?> combo) { // combo générique
         JPanel p = new JPanel();
         p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
@@ -228,8 +477,7 @@ public class VehiculeNewPanel extends JPanel {
         line.setAlignmentX(Component.LEFT_ALIGNMENT);
         setFieldHeight(line, FIELD_H);
 
-        JButton cal = iconButton("calendar.png");
-
+        JButton cal = iconButton("calendar.png"); // optionnel
         line.add(field, BorderLayout.CENTER);
         line.add(cal, BorderLayout.EAST);
 
@@ -258,6 +506,7 @@ public class VehiculeNewPanel extends JPanel {
         setFieldHeight(line, FIELD_H);
 
         JButton search = iconButton("search.png");
+        search.addActionListener(e -> openClientPicker());
 
         line.add(field, BorderLayout.CENTER);
         line.add(search, BorderLayout.EAST);
@@ -304,10 +553,63 @@ public class VehiculeNewPanel extends JPanel {
     }
 
     private void setFieldHeight(JComponent comp, int h) {
-        // largeur flexible, hauteur fixe
         comp.setPreferredSize(new Dimension(10, h));
         comp.setMinimumSize(new Dimension(10, h));
         comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
         comp.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
+
+    private void resetForm() {
+        tfImmat.setText("");
+        tfDateCirculation.setText("");
+        tfDernierKm.setText("");
+        tfClient.setText("");
+        selectedClientId = null;
+
+        tfMarque.setText("");
+        tfModele.setText("");
+        tfNbPortes.setText("");
+        tfNbPlaces.setText("");
+        tfPuissance.setText("");
+
+        cbEnergie.setSelectedIndex(0);
+        cbBoite.setSelectedIndex(0);
+
+        vehiculeEditingId = null;
+
+    }
+
+    private Long vehiculeEditingId = null;
+
+    public void editVehicule(Vehicule v) {
+        if (v == null) return;
+
+        this.vehiculeEditingId = v.getId();
+
+        tfImmat.setText(v.getImmat() != null ? v.getImmat() : "");
+        if (v.getDateMiseEnCirculation() != null) {
+            tfDateCirculation.setText(v.getDateMiseEnCirculation().format(DATE_FMT));
+        } else tfDateCirculation.setText("");
+
+        tfDernierKm.setText(v.getDernierKilometrage() != null ? String.valueOf(v.getDernierKilometrage()) : "");
+
+        if (v.getClient() != null) {
+            selectedClientId = v.getClient().getId();
+            tfClient.setText((v.getClient().getPrenom() + " " + v.getClient().getNom()).trim());
+        }
+
+        TypeVehicule tv = v.getTypeVehicule();
+        if (tv != null) {
+            tfMarque.setText(tv.getMarque() != null ? tv.getMarque() : "");
+            tfModele.setText(tv.getModele() != null ? tv.getModele() : "");
+
+            if (tv.getEnergie() != null) cbEnergie.setSelectedItem(tv.getEnergie());
+            if (tv.getBoiteVitesse() != null) cbBoite.setSelectedItem(tv.getBoiteVitesse());
+
+            tfNbPortes.setText(tv.getNbPortes() != null ? String.valueOf(tv.getNbPortes()) : "");
+            tfNbPlaces.setText(tv.getNbPlaces() != null ? String.valueOf(tv.getNbPlaces()) : "");
+            tfPuissance.setText(tv.getPuissance() != null ? String.valueOf(tv.getPuissance()) : "");
+        }
+    }
+
 }
