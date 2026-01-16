@@ -5,6 +5,7 @@ import auto2i.ui.client.ClientListPanel;
 import auto2i.ui.client.ClientNewPanel;
 import auto2i.ui.client.ClientShowPanel;
 import auto2i.ui.home.HomePanel;
+import auto2i.ui.intervention.InterventionsPanel;
 import auto2i.ui.panels.PlaceholderPanel;
 import auto2i.ui.panels.SidebarPanel;
 import auto2i.ui.vehicule.VehiculeListPanel;
@@ -26,6 +27,7 @@ public class MainFrame extends JFrame {
     public static final String PAGE_CLIENT_NEW    = "CLIENT_NEW";
     public static final String PAGE_CLIENT_SHOW   = "CLIENT_SHOW";
 
+    public static final String PAGE_INTERVENTIONS = "INTERVENTIONS";
     public static final String PAGE_REPARATION    = "REPARATION";
     public static final String PAGE_ENTRETIEN     = "ENTRETIEN";
 
@@ -62,8 +64,10 @@ public class MainFrame extends JFrame {
             @Override public void goVehiculesNew() { showPage(PAGE_VEHICULE_NEW); }
             @Override public void goClientsList() { showPage(PAGE_CLIENT_LIST); }
             @Override public void goClientsNew() { goClientNew(); }
-            @Override public void goReparations() { showPage(PAGE_REPARATION); }
-            @Override public void goEntretiens() { showPage(PAGE_ENTRETIEN); }
+            @Override public void goInterventions() { showPage(PAGE_INTERVENTIONS); }
+            @Override public void goReparations()   { showPage(PAGE_REPARATION); }
+            @Override public void goEntretiens()    { showPage(PAGE_ENTRETIEN); }
+
         });
 
         body.add(sidebar, BorderLayout.WEST);
@@ -75,6 +79,17 @@ public class MainFrame extends JFrame {
         });
         contentCards.add(homePanel, PAGE_HOME);
 
+
+        // ===== INTERVENTIONS
+        InterventionsPanel interPanel = new InterventionsPanel(
+                () -> showPage(PAGE_HOME),
+                () -> System.out.println("TODO: ajout intervention"),
+                immat -> System.out.println("TODO: search immat = " + immat)
+        );
+        contentCards.add(interPanel, "INTERVENTIONS");
+
+        contentCards.add(new PlaceholderPanel("Réparations"), PAGE_REPARATION);
+        contentCards.add(new PlaceholderPanel("Entretiens"), PAGE_ENTRETIEN);
 
         // ===== VEHICULES
         vehiculeShowPanel = new VehiculeShowPanel(
@@ -148,10 +163,6 @@ public class MainFrame extends JFrame {
         });
         contentCards.add(clientNewPanel, PAGE_CLIENT_NEW);
 
-        // ===== OTHERS
-        contentCards.add(new PlaceholderPanel("Réparations"), PAGE_REPARATION);
-        contentCards.add(new PlaceholderPanel("Entretiens"), PAGE_ENTRETIEN);
-
         body.add(contentCards, BorderLayout.CENTER);
         add(body, BorderLayout.CENTER);
 
@@ -186,6 +197,13 @@ public class MainFrame extends JFrame {
         } else {
             sidebar.setActive(pageKey);
         }
+
+        if (PAGE_REPARATION.equals(pageKey) || PAGE_ENTRETIEN.equals(pageKey)) {
+            sidebar.setActive(PAGE_INTERVENTIONS);
+        } else {
+            sidebar.setActive(pageKey);
+        }
+
     }
 
 

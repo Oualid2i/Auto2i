@@ -24,6 +24,7 @@ public class SidebarPanel extends JPanel {
         void goVehiculesNew();
         void goClientsList();
         void goClientsNew();
+        void goInterventions();
         void goReparations();
         void goEntretiens();
     }
@@ -64,7 +65,7 @@ public class SidebarPanel extends JPanel {
         btnVehListe.addActionListener(e -> nav.goVehiculesList());
         btnVehNew.addActionListener(e -> nav.goVehiculesNew());
 
-        btnInter.addActionListener(e -> nav.goReparations());
+        btnInter.addActionListener(e ->  nav.goInterventions());
         btnRep.addActionListener(e -> nav.goReparations());
         btnEnt.addActionListener(e -> nav.goEntretiens());
 
@@ -217,6 +218,9 @@ public class SidebarPanel extends JPanel {
             case MainFrame.PAGE_CLIENT_NEW:
                 setMainActive(btnClients);
                 setSubActive(btnCliNew);
+                break;
+            case MainFrame.PAGE_INTERVENTIONS:
+                setMainActive(btnInter);
                 break;
             case MainFrame.PAGE_REPARATION:
                 setMainActive(btnInter);
